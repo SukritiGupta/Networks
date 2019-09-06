@@ -17,7 +17,7 @@ class sc{
     public DataOutputStream ros() { return this.dos; }
 }
 
-	
+
 public class tcpserver {
 	public static Map< String, sc> ss;
 	public static Map< String, sc> rs;
@@ -62,7 +62,7 @@ class ClientHandler implements Runnable{
 					this.outstrm.writeBytes("REGISTERED TOSEND "+usr+"\n");			tcpserver.ss.put(usr,t1);			this.usr=usr;		trnsmit();				
 				}
 				else{
-					this.outstrm.writeBytes("ERROR 100 Malformed username\n");		this.s.close();			
+					this.outstrm.writeBytes("ERROR 100 Malformed username\n");			
 				}
 			}
 			else if(hdr.equals("REGISTER TORECV")){
@@ -71,7 +71,7 @@ class ClientHandler implements Runnable{
 					this.outstrm.writeBytes("REGISTERED TORECV "+usr+"\n");			tcpserver.rs.put(usr,t2);			this.usr=usr;	
 				}
 				else{
-					this.outstrm.writeBytes("ERROR 100 Malformed username\n");		this.s.close();
+					this.outstrm.writeBytes("ERROR 100 Malformed username\n");
 				}
 			}
 			else{
@@ -87,7 +87,14 @@ class ClientHandler implements Runnable{
 
     	while(true){
     		try {
-    			h1 = instream.readLine();		h2 = instream.readLine();		h3 = instream.readLine();		h4 = instream.readLine();	
+    			h1 = instream.readLine();
+                if(h1.equals("UNREGISTER")){
+                    tcpserver.rs.get(this.usr).dos.writeBytes("UNREGISTER");
+                    tcpserver.rs.get(this.usr).soc.close();             tcpserver.rs.get(this.usr).dis.close();           tcpserver.rs.get(this.usr).dos.close();
+                    tcpserver.ss.get(this.usr).soc.close();             tcpserver.ss.get(this.usr).dis.close();           tcpserver.ss.get(this.usr).dos.close();
+                    tcpserver.ss.remove(this.usr);                      tcpserver.rs.remove(this.usr);                    return;                 
+                }		
+                h2 = instream.readLine();		h3 = instream.readLine();		h4 = instream.readLine();	
     			rcvr = (h1.split(" ",2))[1];	System.out.println("["+this.usr+"] to ["+rcvr+"]: "+h4);
     			
     			if(!tcpserver.rs.containsKey(rcvr)){

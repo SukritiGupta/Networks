@@ -60,10 +60,13 @@ class ClientSender implements Runnable{
             try{    
                 while(true){
                     inp = in_std.readLine();        if(inp.charAt(0)=='@')break;
+                    if(inp.substring(0,10).equals("UNREGISTER")){
+                        this.outSS.writeBytes("UNREGISTER");     this.s.close();         this.inSS.close();          this.outSS.close();     return;
+                    }
                 }
                 l = inp.split(" ",2);                       recvr = (l[0]).substring(1);                msg = l[1];
                 this.outSS.writeBytes("SEND "+recvr+"\n"+"Content-length: "+msg.length()+"\n\n"+msg+"\n"); 
-                resp = this.inSS.readLine();				System.out.println("S: "+ "Message Sent");       
+                resp = this.inSS.readLine();				System.out.println("S: "+ resp);       
             } 
             catch(IOException i){   System.out.println(i);  }
         } 
@@ -85,7 +88,11 @@ class ClientReceiver implements Runnable{
         while (true)  
         { 
             try {
-            	h1 = this.inRS.readLine();			h2 = this.inRS.readLine();			h3 = this.inRS.readLine();			h4 = this.inRS.readLine();	       
+            	h1 = this.inRS.readLine();		
+                if(h1.equals("UNREGISTER")){
+                    this.s.close();         this.inRS.close();          this.outRS.close();     return;
+                }	
+                h2 = this.inRS.readLine();			h3 = this.inRS.readLine();			h4 = this.inRS.readLine();	       
     			sendr = (h1.split(" ",2))[1];
 
                 if(p1.matcher(h1).matches() && p2.matcher(h2).matches()){
