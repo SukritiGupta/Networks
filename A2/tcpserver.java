@@ -2,52 +2,39 @@ import java.io.*;
 import java.text.*; 
 import java.util.*; 
 import java.net.*; 
+import java.util.regex.Matcher; 
+import java.util.regex.Pattern; 
+
+
+class sc{
+    public Socket soc;		public BufferedReader dis;		public DataOutputStream dos;
+
+    public sc(Socket s1, BufferedReader s2, DataOutputStream s3) {
+       this.soc = s1;		this.dis = s2;			this.dos=s3;
+    }
+    public Socket s() { return this.soc; }
+    public BufferedReader ris() { return this.dis; }
+    public DataOutputStream ros() { return this.dos; }
+}
+
 	
 public class tcpserver {
+	public static Map< String, sc> ss;
+	public static Map< String, sc> rs;
 
 	public tcpserver(int port) throws IOException{
-		ServerSocket srvr = new ServerSocket(port);
 
+		ServerSocket srvr = new ServerSocket(port);				ss = new HashMap<>();				rs = new HashMap<>();
+		
 		while(true){
 			Socket soc = null;
 			try{
 				soc = srvr.accept();		DataOutputStream outToClient = new DataOutputStream(soc.getOutputStream());		
 				BufferedReader inFromClient  = new BufferedReader(new InputStreamReader(soc.getInputStream()));
-
-				String msg = inFromClient.readLine();
-				if((msg.substring(0,15)).equals("REGISTER TOSEND")){
-					if((msg.substring(16)).matches("[A-Za-z0-9]+")){
-						outToClient.writeBytes("REGISTERED TOSEND "+msg.substring(16));
-
-						System.out.println("New client "+ soc.getLocalAddress()+":"+soc.getLocalPort()+"_"+soc.getPort()+" is connected.");
-						Thread t = new ClientHandler(soc, inFromClient, outToClient); 		t.start();
-					}
-					else{
-						outToClient.writeBytes("ERROR 100 Malformed username\n");
-						soc.close();
-					}
-				}
-				else if((msg.substring(0,15)).equals("REGISTER TORECV")){
-					if((msg.substring(16)).matches("[A-Za-z0-9]+")){
-						outToClient.writeBytes("REGISTERED TORECV "+msg.substring(16));
-						
-						System.out.println("New client "+ soc.getLocalAddress()+":"+soc.getLocalPort()+"_"+soc.getPort()+" is connected.");
-						Thread t = new ClientHandler(soc, inFromClient, outToClient); 		t.start();
-					}
-					else{
-						outToClient.writeBytes("ERROR 100 Malformed username\n");
-						soc.close();
-					}
-				}
-				else{
-					outToClient.writeBytes("ERROR 101 No user registered\n");
-					soc.close();
-				}
-				
+				ClientHandler t1 = new ClientHandler(soc, inFromClient, outToClient); 				Thread t = new Thread(t1);				t.start();
 			}
 			catch (Exception e){ 
-                soc.close(); 
-                e.printStackTrace(); 
+                soc.close(); 				e.printStackTrace(); 
             }
 		}
 	}
@@ -57,32 +44,69 @@ public class tcpserver {
 	}
 }
 
-class ClientHandler extends Thread{
+class ClientHandler implements Runnable{
 
-	final BufferedReader inFromClient; 		final DataOutputStream outToClient; 		final Socket s; 
+	private BufferedReader instrm; 		private DataOutputStream outstrm; 		private Socket s; 			private String usr;
     public ClientHandler(Socket s, BufferedReader dis, DataOutputStream dos){ 
-        this.s = s; 		this.inFromClient = dis; 			this.outToClient = dos; 
+        this.s = s; 		this.instrm = dis; 			this.outstrm = dos; 
     }
 
     public void run(){ 
-        String msg; 	String response; 
-        while (true)  
-        { 
-            try { 
-                msg = inFromClient.readLine(); 
-                if(msg.equals("Exit")){  
-                    System.out.println("Client " + this.s.getLocalAddress()+":"+this.s.getLocalPort()+"_"+this.s.getPort()+" sends exit...Closing this connection.");			this.s.close();			break; 
-                } 
+        String msg,usr,hdr; 	String response; 
+        try { 
+            msg = this.instrm.readLine();		usr = msg.substring(16);		hdr=msg.substring(0,15);
 
-                System.out.println("Msg from client "+this.s.getLocalAddress()+":"+this.s.getLocalPort()+"_"+this.s.getPort()+" is :" + msg);
-				response = msg.toUpperCase() + "\n";
-				outToClient.writeBytes(response);
+            if(hdr.equals("REGISTER TOSEND")){
+				if(usr.matches("[A-Za-z0-9]+")){
+					sc t1 = new sc(this.s,this.instrm,this.outstrm);			
+					this.outstrm.writeBytes("REGISTERED TOSEND "+usr+"\n");			tcpserver.ss.put(usr,t1);			this.usr=usr;		trnsmit();				
+				}
+				else{
+					this.outstrm.writeBytes("ERROR 100 Malformed username\n");		this.s.close();			
+				}
+			}
+			else if(hdr.equals("REGISTER TORECV")){
+				if(usr.matches("[A-Za-z0-9]+")){	
+					sc t2 = new sc(this.s,this.instrm,this.outstrm);			
+					this.outstrm.writeBytes("REGISTERED TORECV "+usr+"\n");			tcpserver.rs.put(usr,t2);			this.usr=usr;	
+				}
+				else{
+					this.outstrm.writeBytes("ERROR 100 Malformed username\n");		this.s.close();
+				}
+			}
+			else{
+				this.outstrm.writeBytes("ERROR 101 No user registered\n");			this.s.close();
+			}
+        }	catch (IOException e) {e.printStackTrace();} 
+    }
 
-            }	catch (IOException e) {e.printStackTrace();} 
-        } 
-        try{ 	this.inFromClient.close(); 		this.inFromClient.close();		}
-        catch(IOException e){	e.printStackTrace();	} 
+    public void trnsmit(){
+    	BufferedReader instream = this.instrm;						DataOutputStream outstream = this.outstrm;					String h1,h2,h3,h4,resp,rcvr;    
+    	Pattern p1 = Pattern.compile("^SEND [a-zA-Z0-9]+$");		Pattern p2 = Pattern.compile("^Content-length: [0-9]+$");
+    	DataOutputStream rcvrin;									BufferedReader rcvrout;										
+
+    	while(true){
+    		try {
+    			h1 = instream.readLine();		h2 = instream.readLine();		h3 = instream.readLine();		h4 = instream.readLine();	
+    			rcvr = (h1.split(" ",2))[1];	System.out.println("["+this.usr+"] to ["+rcvr+"]: "+h4);
+    			
+    			if(!tcpserver.rs.containsKey(rcvr)){
+    				System.out.println("Client ["+rcvr+"] not registered");
+    				outstream.writeBytes("ERROR 102 Unable to send\n");
+    			}
+    			else if(p1.matcher(h1).matches() && p2.matcher(h2).matches()){
+    				rcvrin= tcpserver.rs.get(rcvr).dos;							rcvrout = tcpserver.rs.get(rcvr).dis;
+                    rcvrin.writeBytes("FORWARD "+this.usr+"\n"+h2+"\n\n"+h4+"\n");
+                    resp = rcvrout.readLine();		
+                    if(resp.equals("RECEIVED "+this.usr))outstream.writeBytes("SENT "+rcvr+"\n");
+                    else outstream.writeBytes("ERROR 102 Unable to send\n");
+                }
+                else{
+                    outstream.writeBytes("ERROR 103 Header incomplete\n");
+                }
+    		}catch (Exception e) {e.printStackTrace();}
+
+    	}
     }
 }
-
 
