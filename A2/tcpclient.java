@@ -80,7 +80,7 @@ public class tcpclient {
             PublicKey publicKey = keys.getPublic();
             String temp=java.util.Base64.getEncoder().encodeToString((publicKey.getEncoded()));
 
-            this.outRS.writeBytes("REGISTER keyPUB "+username+" "+temp+"\n");            
+            this.outSS.writeBytes("REGISTER keyPUB "+username+" "+temp+"\n");            
         }
 
         this.outRS.writeBytes("REGISTER TORECV "+username+"\n");	
@@ -100,8 +100,13 @@ public class tcpclient {
 
 	public static void main(String[] args) throws IOException {
 
+
+
+
+
         String srvrIP="localhost";
-		tcpclient a = new tcpclient(srvrIP,6789,1);	
+        // tcpclient a = new tcpclient(srvrIP,6789,1); 
+		tcpclient a = new tcpclient(args[0],Integer.parseInt(args[1]),Integer.parseInt(args[2]));	
         // cin port, mode, addr....
  	}
 }
@@ -149,20 +154,29 @@ class ClientSender implements Runnable{
                     }
                 }
                 l = inp.split(" ",2);                       
-                recvr = (l[0]).substring(1);                
+                recvr = (l[0]).substring(1);  
+                System.out.println(recvr);
+                System.out.println(l[0]+l[1]);
                 msg = l[1];
 
                 if (mode_of_op==1) 
                 {
-                    this.outSS.writeBytes("Fetch_key "+recvr);
+                    this.outSS.writeBytes("Fetch_key "+recvr+"\n");
+                    System.out.println("Fetch_key called");
                     resp = this.inSS.readLine();
-                    try
+                    System.out.println("*"+ resp+"*");
+
+                    if (!(resp.equals("ERROR 102 Unable to send")))
                     {
-                        msg=new String(CryptographyExample.encrypt(   java.util.Base64.getDecoder().decode(resp) , (l[1]).getBytes()  ));
-                    }
-                    catch(Exception e)
-                    {
-                        System.out.println("Problem in encryption \n");
+                        try
+                        {
+                            msg=java.util.Base64.getEncoder().encodeToString(CryptographyExample.encrypt(   java.util.Base64.getDecoder().decode(resp) , (l[1]).getBytes()  ));
+                        }
+                        catch(Exception e)
+                        {
+                            System.out.println("Problem in encryption \n");
+                            System.out.println(e);
+                        }
                     }
                 }
 
@@ -235,7 +249,7 @@ class ClientReceiver implements Runnable{
                 {
                     try
                     {
-                        h4=new String(CryptographyExample.decrypt(keys.getPrivate().getEncoded(),h4.getBytes()));
+                        h4=new String(CryptographyExample.decrypt(keys.getPrivate().getEncoded(),    java.util.Base64.getDecoder().decode(h4)     ));
                     }
                     catch(Exception e)
                     {

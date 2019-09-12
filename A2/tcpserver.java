@@ -44,6 +44,7 @@ public class tcpserver {
 		ServerSocket srvr = new ServerSocket(port);				
         ss = new HashMap<>();				
         rs = new HashMap<>();
+        publickeymap= new HashMap<>();
 		
 		while(true)
         {
@@ -69,7 +70,7 @@ public class tcpserver {
 
 	public static void main(String[] args) throws IOException
     {
-		tcpserver server = new tcpserver(6789);		
+		tcpserver server = new tcpserver(Integer.parseInt(args[0]));		
 	}
 }
 
@@ -92,62 +93,57 @@ class ClientHandler implements Runnable{
         String msg,usr,hdr; 	
         String response; 
 
-        try 
-        { 
-            msg = this.instrm.readLine();		
-            usr = msg.substring(16);		
-            hdr=msg.substring(0,15);
-
-            if(hdr.equals("REGISTER TOSEND"))
-            {
-				if(usr.matches("[A-Za-z0-9]+"))
+        while(true)
+        {
+            try 
+            { 
+                System.out.println("trying to register user");
+                msg = this.instrm.readLine();        
+                usr = msg.substring(16);        
+                hdr=msg.substring(0,15);
+    
+                if(hdr.equals("REGISTER TOSEND"))
                 {
-					sc t1 = new sc(this.s,this.instrm,this.outstrm);			
-					this.outstrm.writeBytes("REGISTERED TOSEND "+usr+"\n");			
-                    tcpserver.ss.put(usr,t1);			
-                    this.usr=usr;		
-                    trnsmit();				
-				}
-				else
+                    if(usr.matches("[A-Za-z0-9]+"))
+                    {
+                        sc t1 = new sc(this.s,this.instrm,this.outstrm);            
+                        this.outstrm.writeBytes("REGISTERED TOSEND "+usr+"\n");            
+                        tcpserver.ss.put(usr,t1);            
+                        this.usr=usr;        
+                        trnsmit();                
+                    }
+                    else
+                    {
+                        this.outstrm.writeBytes("ERROR 100 Malformed username\n");            
+                    }
+                }
+                else if(hdr.equals("REGISTER TORECV"))
                 {
-					this.outstrm.writeBytes("ERROR 100 Malformed username\n");			
-				}
-			}
-			else if(hdr.equals("REGISTER TORECV"))
-            {
-				if(usr.matches("[A-Za-z0-9]+"))
-                {	
-					sc t2 = new sc(this.s,this.instrm,this.outstrm);			
-					this.outstrm.writeBytes("REGISTERED TORECV "+usr+"\n");			
-                    tcpserver.rs.put(usr,t2);			
-                    this.usr=usr;	
-				}
-				else
-                {
-					this.outstrm.writeBytes("ERROR 100 Malformed username\n");
-				}
-			}
-            else if(hdr.equals("REGISTER keyPUB"))
-            {
-                if(usr.matches("[A-Za-z0-9]+"))
-                {
-                    tcpserver.publickeymap.put(  (usr.split(" ",2)[0]) , (usr.split(" ",2)[1])  );
+                    if(usr.matches("[A-Za-z0-9]+"))
+                    {    
+                        sc t2 = new sc(this.s,this.instrm,this.outstrm);            
+                        this.outstrm.writeBytes("REGISTERED TORECV "+usr+"\n");            
+                        tcpserver.rs.put(usr,t2);            
+                        this.usr=usr; 
+                        break;   
+                    }
+                    else
+                    {
+                        this.outstrm.writeBytes("ERROR 100 Malformed username\n");
+                    }
                 }
                 else
                 {
-                    this.outstrm.writeBytes("ERROR 100 Malformed username\n");
+                    this.outstrm.writeBytes("ERROR 101 No user registered\n");            
+                    this.s.close();
+                    break;
                 }
-            }
-			else
+            }    
+            catch (IOException e) 
             {
-				this.outstrm.writeBytes("ERROR 101 No user registered\n");			
-                this.s.close();
-			}
-        }	
-        catch (IOException e) 
-        {
-            e.printStackTrace();
-        } 
+                e.printStackTrace();
+            } 
+        }
     }
 
     public void trnsmit()
@@ -164,6 +160,7 @@ class ClientHandler implements Runnable{
         {
     		try 
             {
+                System.out.println("Waiting for command");
     			h1 = instream.readLine();
 
                 if(h1.equals("UNREGISTER"))
@@ -181,9 +178,30 @@ class ClientHandler implements Runnable{
                     tcpserver.rs.remove(this.usr);                    
                     return;                 
                 }
+
+                else if(h1.length()>16 && h1.substring(0,15).equals("REGISTER keyPUB"))
+                {
+                    String usr=h1.substring(16);
+                    String key=(usr.split(" "))[1];
+                    usr=(usr.split(" "))[0];
+
+                    System.out.println("###########"+usr+"*******"+ key);
+                    if(usr.matches("[A-Za-z0-9]+"))
+                    {
+                        tcpserver.publickeymap.put(  usr , key  );
+                    }
+                    else
+                    {
+                        this.outstrm.writeBytes("ERROR 100 Malformed username\n");
+                    }
+                    continue;
+                }
+
+
                 if(((h1.split(" ",2))[0]).equals("Fetch_key"))	
                 {
                     rcvr = (h1.split(" ",2))[1];
+                    System.out.println(rcvr+"**************8");
                     if(!tcpserver.publickeymap.containsKey(rcvr))
                     {
                         System.out.println("Client ["+rcvr+"] not registered");
