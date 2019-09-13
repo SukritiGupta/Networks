@@ -110,7 +110,8 @@ class ClientHandler implements Runnable{
                         this.outstrm.writeBytes("REGISTERED TOSEND "+usr+"\n");            
                         tcpserver.ss.put(usr,t1);            
                         this.usr=usr;        
-                        trnsmit();                
+                        trnsmit();
+                        break;                
                     }
                     else
                     {
