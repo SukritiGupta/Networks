@@ -97,7 +97,7 @@ class ClientHandler implements Runnable{
         {
             try 
             { 
-                System.out.println("trying to register user");
+                // System.out.println("trying to register user");
                 msg = this.instrm.readLine();        
                 usr = msg.substring(16);        
                 hdr=msg.substring(0,15);
@@ -160,7 +160,7 @@ class ClientHandler implements Runnable{
         {
     		try 
             {
-                System.out.println("Waiting for command");
+                // System.out.println("Waiting for command");
     			h1 = instream.readLine();
 
                 if(h1.equals("UNREGISTER"))
@@ -185,7 +185,7 @@ class ClientHandler implements Runnable{
                     String key=(usr.split(" "))[1];
                     usr=(usr.split(" "))[0];
 
-                    System.out.println("###########"+usr+"*******"+ key);
+                    // System.out.println("###########"+usr+"*******"+ key);
                     if(usr.matches("[A-Za-z0-9]+"))
                     {
                         tcpserver.publickeymap.put(  usr , key  );
@@ -201,7 +201,7 @@ class ClientHandler implements Runnable{
                 if(((h1.split(" ",2))[0]).equals("Fetch_key"))	
                 {
                     rcvr = (h1.split(" ",2))[1];
-                    System.out.println(rcvr+"**************8");
+                    // System.out.println(rcvr+"**************8");
                     if(!tcpserver.publickeymap.containsKey(rcvr))
                     {
                         System.out.println("Client ["+rcvr+"] not registered");
@@ -239,7 +239,11 @@ class ClientHandler implements Runnable{
                 else{
                     outstream.writeBytes("ERROR 103 Header incomplete\n");
                 }
-    		}catch (Exception e) {e.printStackTrace();}
+    		}
+            catch (Exception e) 
+            {
+                e.printStackTrace();
+            }
 
     	}
     }

@@ -2,11 +2,11 @@ import java.io.*;
 import java.net.*;
 import java.util.regex.Matcher; 
 import java.util.regex.Pattern;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey; 
-
+import java.security.*;
+import java.util.Arrays;
+import java.security.MessageDigest; 
+import java.nio.charset.StandardCharsets;
+import java.security.spec.X509EncodedKeySpec;
 
 public class tcpclient {
 
@@ -68,7 +68,7 @@ public class tcpclient {
             System.out.println(i);	
         }
 
-        if (mode==1) 
+        if (mode==1||mode==2) 
         {
             try{
             keys = CryptographyExample.generateKeyPair();}
@@ -93,7 +93,7 @@ public class tcpclient {
         Thread t11 = new Thread(t1);	
         t11.start();
         
-        ClientReceiver t2 = new ClientReceiver(this.recvSocket,this.inRS,this.outRS,mode, this.keys);    	
+        ClientReceiver t2 = new ClientReceiver(this.recvSocket,this.inRS,this.outRS,mode, this.keys,this.inSS,this.outSS);    	
         Thread t22 = new Thread(t2);	
         t22.start();
 	}
@@ -128,6 +128,15 @@ class ClientSender implements Runnable{
         this.keys=key;
 
     }
+        public static String sign(String plainText, PrivateKey privateKey) throws Exception {
+        Signature privateSignature = Signature.getInstance("SHA256withRSA");
+        privateSignature.initSign(privateKey);
+        privateSignature.update(plainText.getBytes(StandardCharsets.UTF_8));
+
+        byte[] signature = privateSignature.sign();
+
+        return java.util.Base64.getEncoder().encodeToString(signature);
+    }
 
     public void run()
     { 
@@ -155,16 +164,16 @@ class ClientSender implements Runnable{
                 }
                 l = inp.split(" ",2);                       
                 recvr = (l[0]).substring(1);  
-                System.out.println(recvr);
-                System.out.println(l[0]+l[1]);
+                // System.out.println(recvr);
+                // System.out.println(l[0]+l[1]);
                 msg = l[1];
 
                 if (mode_of_op==1) 
                 {
                     this.outSS.writeBytes("Fetch_key "+recvr+"\n");
-                    System.out.println("Fetch_key called");
+                    // System.out.println("Fetch_key called");
                     resp = this.inSS.readLine();
-                    System.out.println("*"+ resp+"*");
+                    // System.out.println("*"+ resp+"*");
 
                     if (!(resp.equals("ERROR 102 Unable to send")))
                     {
@@ -178,12 +187,52 @@ class ClientSender implements Runnable{
                             System.out.println(e);
                         }
                     }
+                    this.outSS.writeBytes("SEND "+recvr+"\n"+"Content-length: "+msg.length()+"\n\n"+msg+"\n"); 
+                    resp = this.inSS.readLine();                
+                    System.out.println("S: "+ resp);
                 }
+                if (mode_of_op==2) 
+                {
+                    this.outSS.writeBytes("Fetch_key "+recvr+"\n");
+                    // System.out.println("Fetch_key called");
+                    resp = this.inSS.readLine();
+                    // System.out.println("*"+ resp+"*");
+                    String hash;
 
-                this.outSS.writeBytes("SEND "+recvr+"\n"+"Content-length: "+msg.length()+"\n\n"+msg+"\n"); 
-                resp = this.inSS.readLine();				
-                System.out.println("S: "+ resp);  
+                    if (!(resp.equals("ERROR 102 Unable to send")))
+                    {
+                        try
+                        {
+                            msg=java.util.Base64.getEncoder().encodeToString(CryptographyExample.encrypt(   java.util.Base64.getDecoder().decode(resp) , (l[1]).getBytes()  ));
+                            // System.out.println("Successful encryption 1");
+                            
+                            hash=sign(msg,keys.getPrivate());
+                            // MessageDigest md = MessageDigest.getInstance("SHA-256");
+                            // byte[] shaBytes = md.digest(msg.getBytes(StandardCharsets.UTF_8));
+                            
+                            // System.out.println("done hash encryption");
 
+                            msg=msg+" "+hash;
+
+                        }
+                        catch(Exception e)
+                        {
+                            System.out.println("Problem in encryption \n");
+                            System.out.println(e);
+                        }
+                    }
+                    this.outSS.writeBytes("SEND "+recvr+"\n"+"Content-length: "+msg.length()+"\n\n"+msg+"\n");
+                    resp = this.inSS.readLine();                
+                    System.out.println("S: "+ resp);
+
+
+                }
+                if(mode_of_op==0)
+                {
+                    this.outSS.writeBytes("SEND "+recvr+"\n"+"Content-length: "+msg.length()+"\n\n"+msg+"\n"); 
+                    resp = this.inSS.readLine();				
+                    System.out.println("S: "+ resp);  
+                }
             } 
             catch(IOException i)
             {   
@@ -195,20 +244,34 @@ class ClientSender implements Runnable{
 
 
 class ClientReceiver implements Runnable{
-
+    
+    private BufferedReader inSS;      
+    private DataOutputStream outSS;
     private BufferedReader inRS;      
     private DataOutputStream outRS;         
     private Socket s; 
     private int mode_of_op;
     private KeyPair keys;
 
-    public ClientReceiver(Socket s, BufferedReader dis, DataOutputStream dos, int mode, KeyPair key)
+    public ClientReceiver(Socket s, BufferedReader dis, DataOutputStream dos, int mode, KeyPair key, BufferedReader dis2, DataOutputStream dos2)
     { 
         this.s = s;         
-        this.inRS = dis;            
+        this.inRS = dis;
         this.outRS = dos; 
+        this.inSS = dis2;            
+        this.outSS = dos2;
         this.mode_of_op=mode;
         this.keys=key;
+    }
+
+        public static boolean verify(String plainText, String signature, PublicKey publicKey) throws Exception {
+        Signature publicSignature = Signature.getInstance("SHA256withRSA");
+        publicSignature.initVerify(publicKey);
+        publicSignature.update(plainText.getBytes(StandardCharsets.UTF_8));
+
+        byte[] signatureBytes = java.util.Base64.getDecoder().decode(signature);
+
+        return publicSignature.verify(signatureBytes);
     }
 
     public void run()
@@ -250,13 +313,45 @@ class ClientReceiver implements Runnable{
                     try
                     {
                         h4=new String(CryptographyExample.decrypt(keys.getPrivate().getEncoded(),    java.util.Base64.getDecoder().decode(h4)     ));
+                        System.out.println(sendr+": "+h4);
                     }
                     catch(Exception e)
                     {
                         System.out.println("Problem in decryption \n");
                     }
                 }
-                System.out.println(sendr+": "+h4);
+                if (mode_of_op==2) 
+                {
+                    try
+                    {
+                        String msg, enchash;
+                        msg=h4.split(" ")[0];
+                        enchash=h4.split(" ")[1];
+                        h4=msg;
+
+                        this.outSS.writeBytes("Fetch_key "+sendr+"\n");
+                        // System.out.println("Fetch_key called at recv");
+                        String resp = this.inSS.readLine();
+                        // System.out.println("*"+ resp+"*");
+
+                        if (verify(msg, enchash,KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(java.util.Base64.getDecoder().decode(resp)))))
+                        {
+                            h4=new String(CryptographyExample.decrypt(keys.getPrivate().getEncoded(),    java.util.Base64.getDecoder().decode(h4)     ));   
+                            System.out.println(sendr+": "+h4);
+                        }
+                        else
+                        {
+                            System.out.println("Unreliable source of message: Hash does not match \n");
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("Problem in decryption \n");
+                    }
+                    
+                }
+                else if(mode_of_op==0)
+                    System.out.println(sendr+": "+h4);
 
             }   
             catch (IOException e) 
