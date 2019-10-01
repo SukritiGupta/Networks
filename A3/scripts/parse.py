@@ -1,6 +1,7 @@
 import pandas as pd 
 import numpy as np 
 from pylab import *
+import matplotlib.pyplot as plt 
 
 
 def daily_profile(s):
@@ -37,7 +38,8 @@ tcp_packets["Flow_id"] = "("+tcp_packets['Source']+", "+tcp_packets['Destination
 
 
 # I have  counted only packets  with [SYN];  we could have counted [SYN,ACK] (which are slighly more in number), there are also packets of kind [SYN, ECN, CWR]
-syn_packets = tcp_packets[tcp_packets["Info"].str.contains("\[SYN\]")]
+syn_packets = tcp_packets[tcp_packets["Info"].str.contains("SYN")]
+syn_packets = syn_packets[~syn_packets["Info"].str.contains("\[SYN, ACK\]")]
 
 clients = syn_packets["Source"].unique()
 servers = syn_packets["Destination"].unique()
@@ -51,9 +53,10 @@ no_of_flows = tcp_packets["Flow_id"].unique().size
 
 #3
 #assuming number of tcp connections opened to the server is equal to number of SYN packets send to it.
-srvr_ip = syn_packets["Destination"].unique()[1]							#select the syn packets of any particular server at random
+srvr_ip = servers[1]							#select the syn packets of any particular server at random
 cnctn_to_srvr = syn_packets[syn_packets["Destination"]==srvr_ip]
 profile = daily_profile(cnctn_to_srvr["Time"])	
+
 
 #4
 fin_packets = tcp_packets[tcp_packets["Info"].str.contains("FIN")]
@@ -86,3 +89,17 @@ for index, row in syn_packets.iterrows():
 		open_time.append(w)
 
 open_time.sort()
+y=[]
+u=0
+for i in range(0,len(open_time)):
+	y.append(u)
+	u=u+1
+
+
+y=[(float(k)/len(open_time)) for k in y]
+
+plt.plot(open_time,y)
+plt.xlabel('Connection Duration (sec)', fontsize=18)
+plt.ylabel('P(Connection duration < X)',fontsize=16)
+plt.show()
+
