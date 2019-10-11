@@ -55,7 +55,7 @@ print("No. of servers, No. of clients: "+str(no_of_servers)+", "+str(no_of_clien
 
 
 #2
-no_of_flows = (tcp_packets["Flow_id"].unique().size)/2
+no_of_flows = (tcp_packets["Flow_id"].unique().size)
 print("No. of unique Flows: "+str(no_of_flows))
 
 #3
@@ -147,7 +147,94 @@ plt.ylabel('No. of Bytes (recvd from server)',fontsize=14)
 plt.show()
 
 
+temp=list(syn_packets["Time"])
+interarrival_time=[(temp[i]-temp[i-1]) for i in range(1,len(temp))]
+interarrival_time.sort()
+y_it=[]
+u_it=0
+for i in range(0,len(interarrival_time)):
+	y_it.append(u_it)
+	u_it=u_it+1
+
+
+y_it=[(float(k)/len(interarrival_time)) for k in y_it]
+
+plt.plot(interarrival_time,y_it)
+plt.title("CDF of interarrival time")
+plt.xlabel('Gap between two connection requests (sec)', fontsize=14)
+plt.ylabel('P(Gap < X)',fontsize=14)
+plt.show()
+
+print("Mean of Interarrival Time: "+str(mean(interarrival_time)))
+print("Median of Interarrival Time: "+str(median(interarrival_time)))
+
+incoming_packets=[]
+incoming_packets_size=[]
+outgoing_packets_size=[]
+for i in range(0,len(tcp_packets)):
+	if (tcp_packets.iloc[i]["Destination"] in servers):
+		incoming_packets.append(tcp_packets.iloc[i]["Time"])
+		incoming_packets_size.append(tcp_packets.iloc[i]["Length"])
+	else :
+		outgoing_packets_size.append(tcp_packets.iloc[i]["Length"])
+
+
+
+temp=incoming_packets
+interarrival_time=[(temp[i]-temp[i-1]) for i in range(1,len(temp))]
+interarrival_time.sort()
+y_it=[]
+u_it=0
+for i in range(0,len(interarrival_time)):
+	y_it.append(u_it)
+	u_it=u_it+1
+
+
+y_it=[(float(k)/len(interarrival_time)) for k in y_it]
+
+plt.plot(interarrival_time,y_it)
+plt.title("CDF of interarrival time of all pkts")
+plt.xlabel('Gap between two incoming packets to servers (sec)', fontsize=14)
+plt.ylabel('P(Gap < X)',fontsize=14)
+plt.show()
+
+print("Mean of Interarrival Time incoming packets to server: "+str(mean(interarrival_time)))
+print("Median of Interarrival Time incoming packets to server: "+str(median(interarrival_time)))
 
 
 
 
+
+temp=incoming_packets_size
+temp.sort()
+y_it=[]
+u_it=0
+for i in range(0,len(temp)):
+	y_it.append(u_it)
+	u_it=u_it+1
+
+
+y_it=[(float(k)/len(temp)) for k in y_it]
+
+plt.plot(temp,y_it)
+plt.title("CDF of incoming packet size")
+plt.xlabel('Incoming Packet size', fontsize=14)
+plt.ylabel('P(Size < X)',fontsize=14)
+plt.show()
+
+temp=outgoing_packets_size
+temp.sort()
+y_it=[]
+u_it=0
+for i in range(0,len(temp)):
+	y_it.append(u_it)
+	u_it=u_it+1
+
+
+y_it=[(float(k)/len(temp)) for k in y_it]
+
+plt.plot(temp,y_it)
+plt.title("CDF of incoming packet size")
+plt.xlabel('Incoming Packet size', fontsize=14)
+plt.ylabel('P(Size < X)',fontsize=14)
+plt.show()
