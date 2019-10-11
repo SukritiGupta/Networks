@@ -27,7 +27,7 @@ def req_type(s):
 		return -1
 
 
-df = pd.read_csv("../Database/lbnl.anon-ftp.03-01-14.csv", index_col="No.")
+df = pd.read_csv("../Database/lbnl.anon-ftp.03-01-18.csv", index_col="No.")
 
 tcp_packets = df[df["Protocol"]=="TCP"]
 
@@ -145,7 +145,6 @@ plt.title('No. of Bytes (sent to server) Vs. No. of Bytes (recvd from server), P
 plt.xlabel('No. of Bytes (sent to server)', fontsize=14)
 plt.ylabel('No. of Bytes (recvd from server)',fontsize=14)
 plt.show()
-
 
 
 
