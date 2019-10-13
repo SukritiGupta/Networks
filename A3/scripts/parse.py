@@ -5,6 +5,7 @@ from pylab import *
 import matplotlib.pyplot as plt 
 from statistics import median, mean 
 from scipy.stats import pearsonr
+import csv
 
 
 def daily_profile(s):
@@ -27,7 +28,7 @@ def req_type(s):
 		return -1
 
 
-df = pd.read_csv("../Database/lbnl.anon-ftp.03-01-14.csv", index_col="No.")
+df = pd.read_csv("../Database/lbnl.anon-ftp.03-01-18.csv", index_col="No.")
 
 tcp_packets = df[df["Protocol"]=="TCP"]
 
@@ -128,12 +129,14 @@ for i in range(0,len(open_time)):
 
 y=[(float(k)/len(open_time)) for k in y]
 
+#4
 plt.plot(open_time_sorted,y)
 plt.title("CDF of Connection Duration")
 plt.xlabel('Connection Duration (sec)', fontsize=14)
 plt.ylabel('P(Connection duration < X)',fontsize=14)
 plt.show()
 
+#5
 plt.scatter(open_time,to_size)
 plt.title('No. of Bytes (sent to server) Vs. Connection Duration, Pearson_Coeff = '+str(pearsonr(open_time,to_size)[0]))
 plt.xlabel('Connection Duration', fontsize=14)
@@ -146,9 +149,15 @@ plt.xlabel('No. of Bytes (sent to server)', fontsize=14)
 plt.ylabel('No. of Bytes (recvd from server)',fontsize=14)
 plt.show()
 
-
+#6
 temp=list(syn_packets["Time"])
 interarrival_time=[(temp[i]-temp[i-1]) for i in range(1,len(temp))]
+
+with open('6.csv','wb') as fl:
+	wr = csv.writer(fl, quoting=csv.QUOTE_ALL, lineterminator='\n')
+	for v in interarrival_time:
+		wr.writerow([v])
+
 interarrival_time.sort()
 y_it=[]
 u_it=0
@@ -168,6 +177,7 @@ plt.show()
 print("Mean of Interarrival Time: "+str(mean(interarrival_time)))
 print("Median of Interarrival Time: "+str(median(interarrival_time)))
 
+#7
 incoming_packets=[]
 incoming_packets_size=[]
 outgoing_packets_size=[]
@@ -178,10 +188,14 @@ for i in range(0,len(tcp_packets)):
 	else :
 		outgoing_packets_size.append(tcp_packets.iloc[i]["Length"])
 
-
-
 temp=incoming_packets
 interarrival_time=[(temp[i]-temp[i-1]) for i in range(1,len(temp))]
+
+with open('7.csv','wb') as fl1:
+	wr = csv.writer(fl1, quoting=csv.QUOTE_ALL, lineterminator='\n')
+	for v in interarrival_time:
+		wr.writerow([v])
+
 interarrival_time.sort()
 y_it=[]
 u_it=0
@@ -202,9 +216,7 @@ print("Mean of Interarrival Time incoming packets to server: "+str(mean(interarr
 print("Median of Interarrival Time incoming packets to server: "+str(median(interarrival_time)))
 
 
-
-
-
+#8
 temp=incoming_packets_size
 temp.sort()
 y_it=[]
@@ -234,7 +246,9 @@ for i in range(0,len(temp)):
 y_it=[(float(k)/len(temp)) for k in y_it]
 
 plt.plot(temp,y_it)
-plt.title("CDF of incoming packet size")
+plt.title("CDF of outgoing packet size")
 plt.xlabel('Incoming Packet size', fontsize=14)
 plt.ylabel('P(Size < X)',fontsize=14)
 plt.show()
+
+
