@@ -5,7 +5,7 @@ def rev_id(s):
 	l = s.strip('()').split(", ")
 	return "("+l[1]+", "+l[0]+", "+l[3]+", "+l[2]+")"
 
-df = pd.read_csv("../Database/lbnl.anon-ftp.03-01-14.csv", index_col="No.")
+df = pd.read_csv("../Database/lbnl.anon-ftp.03-01-11.csv", index_col="No.")
 
 tcp_packets = df[df["Protocol"]=="TCP"]
 
@@ -55,7 +55,8 @@ for i in range(0,len(fromclientToS)):
 
 
 g1 = (usefulxstc,usefulystc)
-g2 = (usefulx,usefuly)
+# g2 = (usefulx,usefuly)
+g2 = (usefulx,ackedseq)
 
 data = (g1, g2)
 colors = ("red", "green")
