@@ -99,7 +99,6 @@ fro_size=[]
 all_pac = tcp_packets[tcp_packets["Info"].str.contains("SYN|RST|FIN")]
 all_pac = all_pac[~all_pac["Info"].str.contains("\[SYN, ACK\]")]
 
-lf=[]
 
 for index, row in syn_packets.iterrows():
 	w,s1,s2 = look(all_pac, row["Time"], row["Flow_id"],tcp_packets[(tcp_packets["Flow_id"]==row["Flow_id"]) | (tcp_packets["Flow_id"]==rev_id(row["Flow_id"])) ])
@@ -107,7 +106,6 @@ for index, row in syn_packets.iterrows():
 		open_time.append(w)
 		to_size.append(s1)
 		fro_size.append(s2)
-		lf.append({(s1+s2):row["Flow_id"]})
 
 median_time = median(open_time)
 mean_time = mean(open_time)
