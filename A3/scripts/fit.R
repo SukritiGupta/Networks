@@ -22,3 +22,9 @@ fe.norm$aic
 
 fit.weibull <- fitdist(df$X, "weibull")
 fit.gamma <- fitdist(df$X, "gamma")
+
+
+df <- read.csv("6.csv", header=TRUE)
+d <- head(df,1480)
+fe.exp <- fitdist(d$X, "exp")
+fe.exp
